@@ -22,6 +22,8 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
+//task 2:
+int memsize(void);
 
 // ulib.c
 int stat(const char*, struct stat*);

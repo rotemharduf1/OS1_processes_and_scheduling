@@ -89,3 +89,14 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+//task2:
+//outputs the size of the running process’ memory in bytes and a userspace program to test it
+uint64
+sys_memsize(void)
+{
+  uint64 memsize;
+  struct proc *p = myproc();
+  memsize = p->sz;
+  return memsize;
+}
