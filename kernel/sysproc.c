@@ -9,10 +9,22 @@
 uint64
 sys_exit(void)
 {
-  int n;
-  argint(0, &n);
-  exit(n);
-  return 0;  // not reached
+  struct proc *p = myproc();
+  int MSG_SIZE = sizeof(p->exit_msg);
+
+  int status;
+  char msg[MSG_SIZE];
+
+  argint(0, &status);
+
+  if(argstr(1, msg, MSG_SIZE) < 0) // copy the message from user space to msg
+    return -1;
+
+  strncpy(p->exit_msg, msg, MSG_SIZE - 1);
+  p->exit_msg[MSG_SIZE - 1] = '\0';
+
+  exit(status);
+  return 0;  // Not reached
 }
 
 uint64
