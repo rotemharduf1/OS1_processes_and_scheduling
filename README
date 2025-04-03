@@ -59,3 +59,12 @@ You will need a RISC-V "newlib" tool chain from
 https://github.com/riscv/riscv-gnu-toolchain, and qemu compiled for
 riscv64-softmmu.  Once they are installed, and in your shell
 search path, you can run "make qemu".
+
+/////////////////////////////////////////////////////
+//build container:
+docker build -f .devcontainer/Dockerfile -t xv6-dev .
+
+// run container:
+docker run -it --rm -v $(pwd):/workspace -w /workspace xv6-dev /bin/bash
+
+
