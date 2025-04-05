@@ -38,3 +38,6 @@ entry("sleep");
 entry("uptime");
 # task 2:
 entry("memsize");
+# task 4:
+entry("forkn");
+entry("waitall");

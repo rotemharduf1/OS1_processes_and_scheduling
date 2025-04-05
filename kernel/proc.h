@@ -107,3 +107,6 @@ struct proc {
   // task 3:
   char exit_msg[32];         // Exit message
 };
+
+struct proc* custom_fork(void);
+

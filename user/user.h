@@ -41,5 +41,7 @@ void free(void*);
 int atoi(const char*);
 int memcmp(const void *, const void *, uint);
 void *memcpy(void *, const void *, uint);
-int exit_wrapper(int status) __attribute__((noreturn));
-int wait_wrapper(int *status);
+
+//task 4:
+int forkn(int n, int *pids);
+int waitall(int *count, int *statuses);

@@ -10,5 +10,5 @@ main(void)
 {
   if(fork() > 0)
     sleep(5);  // Let child exit_wrapper before parent.
-  exit_wrapper(0);
+  exit(0, "");
 }

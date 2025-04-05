@@ -18,6 +18,11 @@ struct spinlock pid_lock;
 extern void forkret(void);
 static void freeproc(struct proc *p);
 
+void public_freeproc(struct proc *p) {
+  freeproc(p);
+}
+
+
 extern char trampoline[]; // trampoline.S
 
 // helps ensure that wakeups of wait()ing
@@ -344,7 +349,7 @@ reparent(struct proc *p)
 // An exited process remains in the zombie state
 // until its parent calls wait().
 void
-exit(int status)
+exit(int status, char *msg)
 {
   struct proc *p = myproc();
 
@@ -378,6 +383,7 @@ exit(int status)
   p->xstate = status;
   p->state = ZOMBIE;
 
+  safestrcpy(p->exit_msg, msg, sizeof(p->exit_msg));
   release(&wait_lock);
 
   // Jump into the scheduler, never to return.
@@ -388,7 +394,7 @@ exit(int status)
 // Wait for a child process to exit and return its pid.
 // Return -1 if this process has no children.
 int
-wait(uint64 addr)
+wait(uint64 addr,uint64 msg_addr)
 {
   struct proc *pp;
   int havekids, pid;
@@ -414,6 +420,9 @@ wait(uint64 addr)
             release(&wait_lock);
             return -1;
           }
+         //task3:
+          copyout(p->pagetable, msg_addr, pp->exit_msg, sizeof(pp->exit_msg));
+
           freeproc(pp);
           release(&pp->lock);
           release(&wait_lock);
@@ -681,3 +690,36 @@ procdump(void)
     printf("\n");
   }
 }
+
+struct proc *
+custom_fork(void)
+{
+  int index;
+  struct proc *p = myproc();
+  struct proc *np = allocproc();
+
+  if (np == 0) return 0;
+
+  if (uvmcopy(p->pagetable, np->pagetable, p->sz) < 0) {
+    freeproc(np);
+    release(&np->lock);
+    return 0;
+  }
+  np->sz = p->sz;
+
+  *(np->trapframe) = *(p->trapframe); // copy trapframe
+
+  for (index = 0; index < NOFILE; index++)
+    if (p->ofile[index])
+      np->ofile[index] = filedup(p->ofile[index]);
+  np->cwd = idup(p->cwd);
+
+  safestrcpy(np->name, p->name, sizeof(p->name));
+
+  acquire(&wait_lock);
+  np->parent = p;
+  release(&wait_lock);
+
+  return np;
+}
+

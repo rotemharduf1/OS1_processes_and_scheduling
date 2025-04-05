@@ -65,8 +65,11 @@ runcmd(struct cmd *cmd)
   struct pipecmd *pcmd;
   struct redircmd *rcmd;
 
+  int status;
+  char msg[32] = {0};
+
   if(cmd == 0)
-    exit_wrapper(1);
+    exit(1, "");
 
   switch(cmd->type){
   default:
@@ -75,7 +78,7 @@ runcmd(struct cmd *cmd)
   case EXEC:
     ecmd = (struct execcmd*)cmd;
     if(ecmd->argv[0] == 0)
-      exit_wrapper(1);
+      exit(1, "");
     exec(ecmd->argv[0], ecmd->argv);
     fprintf(2, "exec %s failed\n", ecmd->argv[0]);
     break;
@@ -85,16 +88,18 @@ runcmd(struct cmd *cmd)
     close(rcmd->fd);
     if(open(rcmd->file, rcmd->mode) < 0){
       fprintf(2, "open %s failed\n", rcmd->file);
-      exit_wrapper(1);
+      exit(1, "");
     }
     runcmd(rcmd->cmd);
     break;
 
   case LIST:
+
     lcmd = (struct listcmd*)cmd;
     if(fork1() == 0)
       runcmd(lcmd->left);
-    wait_wrapper(0);
+    if (wait(&status, msg) > 0)
+      fprintf(2, "Child exited: %s\n", msg);
     runcmd(lcmd->right);
     break;
 
@@ -118,8 +123,11 @@ runcmd(struct cmd *cmd)
     }
     close(p[0]);
     close(p[1]);
-    wait_wrapper(0);
-    wait_wrapper(0);
+    if (wait(&status, msg) > 0)
+      fprintf(2, "Child exited: %s\n", msg);
+    if (wait(&status, msg) > 0)
+      fprintf(2, "Child exited: %s\n", msg);
+
     break;
 
   case BACK:
@@ -128,7 +136,7 @@ runcmd(struct cmd *cmd)
       runcmd(bcmd->cmd);
     break;
   }
-  exit_wrapper(0);
+  exit(0, "");
 }
 
 int
@@ -147,6 +155,9 @@ main(void)
 {
   static char buf[100];
   int fd;
+  int status;
+  char msg[32] = {0};
+
 
   // Ensure that three file descriptors are open.
   while((fd = open("console", O_RDWR)) >= 0){
@@ -167,9 +178,12 @@ main(void)
     }
     if(fork1() == 0)
       runcmd(parsecmd(buf));
-    wait_wrapper(0);
+    if (wait(&status, msg) > 0){
+      fprintf(2, "Child exited: %s\n", msg);
+      }
+
   }
-  exit_wrapper(0);
+  exit(0, "");
   return 0; // Ensure main returns an integer
 }
 
@@ -177,7 +191,8 @@ void
 panic(char *s)
 {
   fprintf(2, "%s\n", s);
-  exit_wrapper(1);
+  exit(1, "");
+
 }
 
 int

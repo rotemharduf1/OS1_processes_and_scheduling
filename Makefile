@@ -135,6 +135,7 @@ UPROGS=\
 	$U/_helloworld\
 	$U/_memsize_test\
 	$U/_goodbyeworld\
+	$U/_bigarray\
 
 
 fs.img: mkfs/mkfs README $(UPROGS)
@@ -180,6 +181,6 @@ build: # build container
 	docker build -f .devcontainer/Dockerfile -t xv6-dev .
 
 
-run: # run container:
+run: # run container
 	@echo "Running devcontainer"
 	docker run -it --rm -v $(shell pwd):/workspace -w /workspace xv6-dev /bin/bash

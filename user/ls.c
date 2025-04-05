@@ -78,10 +78,10 @@ main(int argc, char *argv[])
 
   if(argc < 2){
     ls(".");
-    exit_wrapper(0);
+    exit(0, "");
   }
   for(i=1; i<argc; i++)
     ls(argv[i]);
-  exit_wrapper(0);
+  exit(0, "");
   return 0; // Ensure main returns an integer
 }

@@ -20,7 +20,7 @@ _main()
 {
   extern int main();
   main();
-  exit_wrapper(0);
+  exit(0, "");
 }
 
 char*

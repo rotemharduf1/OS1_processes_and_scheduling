@@ -28,24 +28,22 @@ main(void)
     pid = fork();
     if(pid < 0){
       printf("init: fork failed\n");
-      exit_wrapper(1);
+      exit(1, "");
     }
     if(pid == 0){
       exec("sh", argv);
       printf("init: exec sh failed\n");
-      exit_wrapper(1);
+      exit(1, "");
     }
 
     for(;;){
-      // this call to wait_wrapper() returns if the shell exit_wrappers,
-      // or if a parentless process exit_wrappers.
-      wpid = wait_wrapper((int *) 0);
+      wpid = wait((int *) 0, "");
       if(wpid == pid){
         // the shell exit_wrappered; restart it.
         break;
       } else if(wpid < 0){
         printf("init: wait_wrapper returned an error\n");
-        exit_wrapper(1);
+        exit(1, "");
       } else {
         // it was a parentless process; do nothing.
       }

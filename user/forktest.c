@@ -25,24 +25,24 @@ forktest(void)
     if(pid < 0)
       break;
     if(pid == 0)
-      exit_wrapper(0);
+      exit(0, "");
   }
 
   if(n == N){
     print("fork claimed to work N times!\n");
-    exit_wrapper(1);
+    exit(1, "");
   }
 
   for(; n > 0; n--){
-    if(wait_wrapper(0) < 0){
+    if(wait(0,"") < 0){
       print("wait_wrapper stopped early\n");
-      exit_wrapper(1);
+      exit(1, "");
     }
   }
 
-  if(wait_wrapper(0) != -1){
+  if(wait(0,"") != -1){
     print("wait_wrapper got too many\n");
-    exit_wrapper(1);
+    exit(1, "");
   }
 
   print("fork test OK\n");
@@ -52,7 +52,7 @@ int
 main(void)
 {
   forktest();
-  exit_wrapper(0);
+  exit(0, "");
   return 0; // Ensure main returns an integer
 
 }
