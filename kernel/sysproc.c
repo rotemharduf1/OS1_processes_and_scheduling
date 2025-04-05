@@ -17,11 +17,15 @@ sys_exit(void)
 
   argint(0, &status);
 
-  if(argstr(1, msg, MSG_SIZE) < 0) // copy the message from user space to msg
-    return -1;
+  if(argstr(1, msg, MSG_SIZE) < 0) { // if no message is provided
+    printf("No message provided, using default empty.\n");
+    msg[0] = '\0'; // set default message to empty string
+  }
 
   strncpy(p->exit_msg, msg, MSG_SIZE - 1);
   p->exit_msg[MSG_SIZE - 1] = '\0';
+  // print the exit message
+  printf("Process %d exiting with message: %s\n", p->pid, p->exit_msg);
 
   exit(status);
   return 0;  // Not reached

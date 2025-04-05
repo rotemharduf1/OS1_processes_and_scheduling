@@ -12,7 +12,7 @@ int main(int argc, char *argv[]){
   char *memory = malloc(200000);
   if(memory == 0){
     printf("Memory allocation failed\n");
-    exit(1);
+    exit_wrapper(1);
   }
 
   int afterMalloc = memsize();
@@ -23,5 +23,5 @@ int main(int argc, char *argv[]){
   int afterFree = memsize();
   printf("The memory size after free is: %d bytes\n", afterFree);
 
-  exit(0);
+  exit_wrapper(0);
 }

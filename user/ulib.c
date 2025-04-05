@@ -3,6 +3,15 @@
 #include "kernel/fcntl.h"
 #include "user/user.h"
 
+// wrapper for exit() so that we can call it without msg.
+int exit_wrapper(int status) {
+  exit(status, "");
+}
+
+// wrapper for wait() so that we can call it without msg.
+int wait_wrapper(int *status) {
+  return wait(status, "");
+}
 //
 // wrapper so that it's OK if main() does not call exit().
 //
@@ -11,7 +20,7 @@ _main()
 {
   extern int main();
   main();
-  exit(0);
+  exit_wrapper(0);
 }
 
 char*

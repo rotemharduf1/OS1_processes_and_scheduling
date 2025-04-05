@@ -15,5 +15,6 @@ main(int argc, char *argv[])
       write(1, "\n", 1);
     }
   }
-  exit(0);
+  exit_wrapper(0);
+  return 0; // Ensure main returns an integer
 }

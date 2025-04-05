@@ -32,7 +32,7 @@ OBJS = \
 
 # riscv64-unknown-elf- or riscv64-linux-gnu-
 # perhaps in /opt/riscv/bin
-#TOOLPREFIX = riscv64-linux-gnu-
+TOOLPREFIX = riscv64-linux-gnu-
 
 # Try to infer the correct TOOLPREFIX if not set
 ifndef TOOLPREFIX
@@ -134,6 +134,7 @@ UPROGS=\
 	$U/_zombie\
 	$U/_helloworld\
 	$U/_memsize_test\
+	$U/_goodbyeworld\
 
 
 fs.img: mkfs/mkfs README $(UPROGS)
@@ -174,3 +175,11 @@ qemu-gdb: $K/kernel .gdbinit fs.img
 	@echo "*** Now run 'gdb' in another window." 1>&2
 	$(QEMU) $(QEMUOPTS) -S $(QEMUGDB)
 
+build: # build container
+	@echo "Building devcontainer"
+	docker build -f .devcontainer/Dockerfile -t xv6-dev .
+
+
+run: # run container:
+	@echo "Running devcontainer"
+	docker run -it --rm -v $(shell pwd):/workspace -w /workspace xv6-dev /bin/bash

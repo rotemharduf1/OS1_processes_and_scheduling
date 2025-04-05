@@ -1,5 +1,5 @@
 // Create a zombie process that
-// must be reparented at exit.
+// must be reparented at exit_wrapper.
 
 #include "kernel/types.h"
 #include "kernel/stat.h"
@@ -9,6 +9,6 @@ int
 main(void)
 {
   if(fork() > 0)
-    sleep(5);  // Let child exit before parent.
-  exit(0);
+    sleep(5);  // Let child exit_wrapper before parent.
+  exit_wrapper(0);
 }
