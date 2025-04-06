@@ -120,112 +120,82 @@ sys_memsize(void)
 //task4:
 //forkn: fork a process n times
 uint64
-sys_forkn(void)
-{
+sys_forkn(void) {
   int n;
-  uint64 pids_addr;
-  struct proc *p = myproc();
+  uint64 pids;
 
   argint(0, &n);
-  argaddr(1, &pids_addr);
+  argaddr(1, &pids);
 
-  int child_pids[16];
-  struct proc *children[16];
+  if(n < 1 || n > 16)  return -1;
+
+  struct proc *p = myproc();
   int created = 0;
+  int pid_array[n];
 
   for (int i = 0; i < n; i++) {
-    struct proc *np = custom_fork();
-    if (!np) {
-      // cleanup previously created
-      for (int j = 0; j < created; j++) {
-        acquire(&children[j]->lock);
-        children[j]->killed = 1;
-        release(&children[j]->lock);
-      }
+    int pid = fork();
+    if (pid < 0) {
+      // Cleanup if fork fails
+      for (int j = 0; j < created; j++)
+        kill(pid_array[j]);
       return -1;
     }
-
-    // Assign return value (i + 1) to child
-    np->trapframe->a0 = i + 1;
-
-    child_pids[created] = np->pid;
-    children[created] = np;
+    if (pid == 0) {
+      // Child process
+      return i + 1;
+    }
+    pid_array[i] = pid;
     created++;
   }
 
-  if (copyout(p->pagetable, pids_addr, (char*)child_pids, n * sizeof(int)) < 0)
+  if (copyout(p->pagetable, pids, (char*)pid_array, n * sizeof(int)) < 0)
     return -1;
 
-  // Release children to RUNNABLE state
-  for (int i = 0; i < created; i++) {
-    acquire(&children[i]->lock);
-    children[i]->state = RUNNABLE;
-    release(&children[i]->lock);
-  }
-
-  return 0; // parent
+  return 0; // Success
 }
 
+//task4:
+//waitall: wait for all children to exit
 uint64
-sys_waitall(void)
-{
+sys_waitall(void) {
   uint64 n_addr, statuses_addr;
-  struct proc *p = myproc();
+  int count = 0;
+  int statuses[NPROC];
 
   argaddr(0, &n_addr);
   argaddr(1, &statuses_addr);
 
-  struct proc *pp;
-  struct proc *tofree[NPROC];
-  int statuses[NPROC];
-  int count;
+  struct proc *p = myproc();
 
-  retry:
-    count = 0;
-  int found_child = 0;
+  for (;;) {
+    struct proc *pp;
+    int found = 0;
 
-  acquire(&wait_lock);
-
-  for (pp = proc; pp < &proc[NPROC]; pp++) {
-    if (pp->parent == p) {
-      found_child = 1;
-      acquire(&pp->lock);
-      if (pp->state == ZOMBIE) {
-        statuses[count] = pp->xstate;
-        tofree[count] = pp;
-        count++;
-        release(&pp->lock); // unlock before deferring free
-      } else {
+    acquire(&wait_lock);
+    for (pp = proc; pp < &proc[NPROC]; pp++) {
+      if (pp->parent == p && pp->state == ZOMBIE) {
+        found = 1;
+        statuses[count++] = pp->xstate;
+        acquire(&pp->lock); // Acquire the child process lock before freeing
+        release(&wait_lock); // Release wait_lock before calling freeproc
+        public_freeproc(pp);
         release(&pp->lock);
+        break;
       }
+    }
+    if (!found) {
+      release(&wait_lock);
+      break;
     }
   }
 
-  if (!found_child) {
-    release(&wait_lock);
-    int zero = 0;
-    copyout(p->pagetable, n_addr, (char *)&zero, sizeof(int));
-    return 0;
-  }
+  printf("sys_waitall: Processed %d children\n", count); // Debugging print
 
-  if (count < found_child) {
-    sleep(p, &wait_lock);  // wait until more children exit
-    goto retry;
-  }
-
-  release(&wait_lock);
-
-  // Now safe to clean up ZOMBIEs
-  for (int i = 0; i < count; i++) {
-    acquire(&tofree[i]->lock);
-    public_freeproc(tofree[i]); // assumes lock is held
-    release(&tofree[i]->lock);
-  }
-
-  if (copyout(p->pagetable, n_addr, (char *)&count, sizeof(int)) < 0)
+  if (copyout(p->pagetable, n_addr, (char*)&count, sizeof(int)) < 0)
     return -1;
 
-  if (copyout(p->pagetable, statuses_addr, (char *)statuses, sizeof(int) * count) < 0)
+  if (copyout(p->pagetable, statuses_addr, (char*)statuses, count * sizeof(int)) < 0)
     return -1;
 
   return 0;

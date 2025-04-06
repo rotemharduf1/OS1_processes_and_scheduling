@@ -2,78 +2,48 @@
 #include "kernel/stat.h"
 #include "user/user.h"
 
-#define SIZE 65536      // 2^16 elements
-#define MAX_CHILDREN 16 // upper limit allowed by forkn
+#define SIZE 65536      // 2^16
+#define MAX_CHILDREN 16 // maximun childran allowed
+#define NPROC 64       // maximum number of processes
 
-int array[SIZE];
-
-int
-main(int argc, char *argv[])
-{
-    int n = 4;
-
-    if (argc == 2)
-        n = atoi(argv[1]);
-
-    if (n < 1 || n > MAX_CHILDREN) {
-        printf("Invalid number of processes. Must be between 1 and %d\n", MAX_CHILDREN);
-        exit(1, "");
-    }
-
-    // Fill array with consecutive numbers
-    for (int i = 0; i < SIZE; i++)
-        array[i] = i;
-
+int main(void) {
     int pids[MAX_CHILDREN];
+    int statuses[NPROC]; // Changed from MAX_CHILDREN to NPROC
+    int chunk_size = SIZE / MAX_CHILDREN;
+    int child_id = forkn(MAX_CHILDREN, pids);
 
-    int fork_result = forkn(n, pids);
-    if (fork_result < 0) {
-        printf("forkn failed\n");
-        exit(1, "");
-    }
+    if (child_id == 0) {  // Parent Process
+        int n, total_sum = 0;
 
-    if (fork_result == 0) {
-        // Parent process
-        printf("Parent: created %d children with PIDs: ", n);
-        for (int i = 0; i < n; i++)
-            printf("%d ", pids[i]);
-        printf("\n");
-
-        int count = 0;
-        int statuses[MAX_CHILDREN];
-
-        if (waitall(&count, statuses) < 0) {
-            printf("waitall failed\n");
-            exit(1, "");
+        // Wait for all children and accumulate their sums
+        if (waitall(&n, statuses) < 0) {
+            printf("Error: waitall failed.\n");
+            exit(1, "waitall failed");
         }
 
-        if (count != n) {
-            printf("Error: waitall expected %d children, got %d\n", n, count);
-            exit(1, "");
+        printf("Number of children terminated: %d\n", n); // Debugging print
+
+        for (int i = 0; i < n; i++) {
+            printf("Child %d exited with status: %d\n", i, statuses[i]); // Debugging print
+            total_sum += statuses[i];
         }
 
-        int total = 0;
-        for (int i = 0; i < count; i++)
-            total += statuses[i];
-
-        printf("Final total sum: %d\n", total);
-        printf("Expected total: 2147450880\n");
-
-        exit(0, "done");
-    } else {
-        // Child process: fork_result = 1 to n
-        int child_index = fork_result - 1;
-        int chunk_size = SIZE / n;
-        int start = child_index * chunk_size;
-        int end = start + chunk_size;
-        if (child_index == n - 1)
-            end = SIZE;  // last child may pick up the remainder
-
-        int sum = 0;
-        for (int i = start; i < end; i++)
-            sum += array[i];
-
-        printf("Child #%d (pid %d): sum = %d\n", child_index + 1, getpid(), sum);
-        exit(sum, "");
+        printf("Total Sum: %d\n", total_sum);
+        exit(0, "Calculation complete");
     }
+
+    // Child process logic
+    int index = child_id - 1;  // Fixing index calculation
+    int start = index * chunk_size;
+    int end = start + chunk_size;
+
+    int sum = 0;
+    for (int i = start; i < end; i++) {
+        sum += i;
+    }
+
+    printf("Child %d calculated sum: %d\n", child_id, sum); // Debugging print
+
+    // Exit using the sum as the status
+    exit(sum, "");
 }

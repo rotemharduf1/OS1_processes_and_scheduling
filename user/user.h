@@ -24,6 +24,9 @@ int sleep(int);
 int uptime(void);
 //task 2:
 int memsize(void);
+//task 4:
+int forkn(int n, int *pids);
+int waitall(int *count, int *statuses);
 
 // ulib.c
 int stat(const char*, struct stat*);
@@ -42,6 +45,3 @@ int atoi(const char*);
 int memcmp(const void *, const void *, uint);
 void *memcpy(void *, const void *, uint);
 
-//task 4:
-int forkn(int n, int *pids);
-int waitall(int *count, int *statuses);
