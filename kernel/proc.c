@@ -720,6 +720,7 @@ custom_fork(void)
   np->parent = p;
   release(&wait_lock);
 
+  release(&np->lock);
   return np;
 }
 

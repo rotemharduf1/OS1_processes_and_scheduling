@@ -22,6 +22,8 @@
 #include "defs.h"
 #include "proc.h"
 
+struct spinlock console_lock;
+
 #define BACKSPACE 0x100
 #define C(x)  ((x)-'@')  // Control-x
 
@@ -33,12 +35,16 @@
 void
 consputc(int c)
 {
+  acquire(&console_lock);  // 🔒 START CRITICAL SECTION
+
   if(c == BACKSPACE){
     // if the user typed backspace, overwrite with a space.
     uartputc_sync('\b'); uartputc_sync(' '); uartputc_sync('\b');
   } else {
     uartputc_sync(c);
   }
+  release(&console_lock);  // 🔓 END CRITICAL SECTION
+
 }
 
 struct {
@@ -60,12 +66,17 @@ consolewrite(int user_src, uint64 src, int n)
 {
   int i;
 
+  acquire(&console_lock);  // 🔒 lock before printing
+
   for(i = 0; i < n; i++){
     char c;
     if(either_copyin(&c, user_src, src+i, 1) == -1)
       break;
-    uartputc(c);
+//    uartputc(c);
+    uartputc_sync(c);
+
   }
+  release(&console_lock);  // 🔓 unlock after printing
 
   return i;
 }
@@ -182,6 +193,7 @@ void
 consoleinit(void)
 {
   initlock(&cons.lock, "cons");
+  initlock(&console_lock, "console_lock");
 
   uartinit();
 

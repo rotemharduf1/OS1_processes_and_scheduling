@@ -2,14 +2,76 @@
 #include "kernel/stat.h"
 #include "user/user.h"
 
-#define SIZE 65536      // 2^16 elements
-#define MAX_CHILDREN 16 // upper limit allowed by forkn
+#define SIZE 65536
+#define MAX_CHILDREN 16
 
 int array[SIZE];
+int printlock = 0;
 
-int
-main(int argc, char *argv[])
-{
+// write formatted string directly using one write call
+void print_line(const char *label, int num1, const char *label2, int num2, const char *label3, int num3) {
+    char buf[128];
+    char *p = buf;
+
+    // convert integers to strings manually
+    // very simple int->str function
+    char tmp[20];
+    int i, n;
+
+    // part 1
+    while (*label) *p++ = *label++;
+
+    // num1
+    n = num1;
+    i = 0;
+    if (n == 0) tmp[i++] = '0';
+    else {
+        while (n > 0) {
+            tmp[i++] = '0' + (n % 10);
+            n /= 10;
+        }
+    }
+    while (i > 0) *p++ = tmp[--i];
+
+    // part 2
+    while (*label2) *p++ = *label2++;
+
+    // num2
+    n = num2;
+    i = 0;
+    if (n == 0) tmp[i++] = '0';
+    else {
+        while (n > 0) {
+            tmp[i++] = '0' + (n % 10);
+            n /= 10;
+        }
+    }
+    while (i > 0) *p++ = tmp[--i];
+
+    // part 3
+    while (*label3) *p++ = *label3++;
+
+    // num3
+    n = num3;
+    i = 0;
+    if (n == 0) tmp[i++] = '0';
+    else {
+        while (n > 0) {
+            tmp[i++] = '0' + (n % 10);
+            n /= 10;
+        }
+    }
+    while (i > 0) *p++ = tmp[--i];
+
+    *p++ = '\n';
+
+    // write all at once
+    while (__sync_lock_test_and_set(&printlock, 1));
+    write(1, buf, p - buf);
+    __sync_lock_release(&printlock);
+}
+
+int main(int argc, char *argv[]) {
     int n = 4;
 
     if (argc == 2)
@@ -20,12 +82,10 @@ main(int argc, char *argv[])
         exit(1, "");
     }
 
-    // Fill array with consecutive numbers
     for (int i = 0; i < SIZE; i++)
         array[i] = i;
 
     int pids[MAX_CHILDREN];
-
     int fork_result = forkn(n, pids);
     if (fork_result < 0) {
         printf("forkn failed\n");
@@ -33,11 +93,15 @@ main(int argc, char *argv[])
     }
 
     if (fork_result == 0) {
-        // Parent process
-        printf("Parent: created %d children with PIDs: ", n);
+        // parent
+        sleep(1);
+
+        while (__sync_lock_test_and_set(&printlock, 1));
+        printf("Parent: created %d children with PIDs:", n);
         for (int i = 0; i < n; i++)
-            printf("%d ", pids[i]);
+            printf(" %d", pids[i]);
         printf("\n");
+        __sync_lock_release(&printlock);
 
         int count = 0;
         int statuses[MAX_CHILDREN];
@@ -56,24 +120,26 @@ main(int argc, char *argv[])
         for (int i = 0; i < count; i++)
             total += statuses[i];
 
+        while (__sync_lock_test_and_set(&printlock, 1));
         printf("Final total sum: %d\n", total);
         printf("Expected total: 2147450880\n");
+        __sync_lock_release(&printlock);
 
         exit(0, "done");
     } else {
-        // Child process: fork_result = 1 to n
-        int child_index = fork_result - 1;
-        int chunk_size = SIZE / n;
-        int start = child_index * chunk_size;
-        int end = start + chunk_size;
-        if (child_index == n - 1)
-            end = SIZE;  // last child may pick up the remainder
+        // child
+        int idx = fork_result - 1;
+        int chunk = SIZE / n;
+        int start = idx * chunk;
+        int end = (idx == n - 1) ? SIZE : start + chunk;
 
         int sum = 0;
         for (int i = start; i < end; i++)
             sum += array[i];
 
-        printf("Child #%d (pid %d): sum = %d\n", child_index + 1, getpid(), sum);
+        // 🧼 Clean, formatted, locked output
+        print_line("Child #", idx + 1, " (pid ", getpid(), ") sum = ", sum);
+
         exit(sum, "");
     }
 }

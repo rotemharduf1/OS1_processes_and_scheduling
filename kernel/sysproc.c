@@ -194,7 +194,7 @@ sys_waitall(void)
         statuses[count] = pp->xstate;
         tofree[count] = pp;
         count++;
-        release(&pp->lock); // unlock before deferring free
+        release(&pp->lock);
       } else {
         release(&pp->lock);
       }
@@ -209,16 +209,18 @@ sys_waitall(void)
   }
 
   if (count < found_child) {
-    sleep(p, &wait_lock);  // wait until more children exit
+    // Don't sleep if we actually found any zombies this round
+    if (count == 0) {
+      sleep(p, &wait_lock);
+    }
     goto retry;
   }
 
   release(&wait_lock);
 
-  // Now safe to clean up ZOMBIEs
   for (int i = 0; i < count; i++) {
     acquire(&tofree[i]->lock);
-    public_freeproc(tofree[i]); // assumes lock is held
+    public_freeproc(tofree[i]);
     release(&tofree[i]->lock);
   }
 
