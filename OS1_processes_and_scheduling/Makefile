@@ -134,7 +134,7 @@ UPROGS=\
 	$U/_zombie\
 	$U/_helloworld\
 	$U/_memsize_test\
-	$U/_goodbye\
+	$U/_goodbyeworld\
 	$U/_bigarray\
 
 

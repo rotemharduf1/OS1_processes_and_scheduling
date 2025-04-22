@@ -371,16 +371,22 @@ exit(int status, char *msg)
   p->cwd = 0;
 
   acquire(&wait_lock);
-  reparent(p);
-  wakeup(p->parent);
-  release(&wait_lock);
 
+  // Give any children to init.
+  reparent(p);
+
+  // Parent might be sleeping in wait().
+  wakeup(p->parent);
+  
   acquire(&p->lock);
 
   p->xstate = status;
   p->state = ZOMBIE;
-  safestrcpy(p->exit_msg, msg, sizeof(p->exit_msg));
 
+  safestrcpy(p->exit_msg, msg, sizeof(p->exit_msg));
+  release(&wait_lock);
+
+  // Jump into the scheduler, never to return.
   sched();
   panic("zombie exit");
 }
@@ -713,8 +719,7 @@ custom_fork(void)
   acquire(&wait_lock);
   np->parent = p;
   release(&wait_lock);
-  np->state = USED;
-  release(&np->lock);
 
   return np;
 }
+
